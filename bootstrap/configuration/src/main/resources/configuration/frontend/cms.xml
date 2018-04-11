@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><sv:node xmlns:sv="http://www.jcp.org/jcr/sv/1.0" xmlns:esv="http://www.onehippo.org/jcr/xmlimport" sv:name="cms" esv:merge="combine">
+  <sv:node sv:name="cms-preview" esv:merge="combine">
+    <sv:node sv:name="workflowPlugin" esv:merge="combine">
+      <sv:property sv:name="workflow.categories" sv:type="String" esv:merge="override" sv:multiple="true">
+        <sv:value>default</sv:value>
+        <sv:value>translation</sv:value>
+        <sv:value>committype</sv:value>
+        <sv:value>linktranslateddocuments</sv:value>
+      </sv:property>
+    </sv:node>
+  </sv:node>
+</sv:node>

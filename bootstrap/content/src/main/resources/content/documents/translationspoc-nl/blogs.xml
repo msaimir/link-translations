@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><sv:node xmlns:sv="http://www.jcp.org/jcr/sv/1.0" xmlns:esv="http://www.onehippo.org/jcr/xmlimport" sv:name="blogs" esv:merge="combine">
+  <sv:node sv:name="first-blogpost" esv:merge="combine">
+    <sv:node sv:name="first-blogpost[2]" esv:merge="combine">
+      <sv:property sv:name="translationspoc:introduction" sv:type="String" esv:merge="override">
+        <sv:value/>
+      </sv:property>
+      <sv:property sv:name="hippostdpubwf:createdBy" sv:type="String" esv:merge="override">
+        <sv:value>admin</sv:value>
+      </sv:property>
+      <sv:property sv:name="translationspoc:title" sv:type="String" esv:merge="override">
+        <sv:value>First blog</sv:value>
+      </sv:property>
+      <sv:property sv:name="hippo:availability" sv:type="String" esv:merge="override" sv:multiple="true"/>
+      <sv:property sv:name="hippo:related___pathreference" sv:type="String" esv:merge="override">
+        <sv:value>blogpost/hipposysedit:prototypes</sv:value>
+      </sv:property>
+      <sv:property sv:name="hippotranslation:id" sv:type="String" esv:merge="override">
+        <sv:value>536f497c-2042-412c-b765-77c77870c87c</sv:value>
+      </sv:property>
+      <sv:property sv:name="hippostdpubwf:lastModificationDate" sv:type="Date" esv:merge="override">
+        <sv:value>2018-04-11T14:03:11.294+02:00</sv:value>
+      </sv:property>
+      <sv:property sv:name="translationspoc:publicationdate" sv:type="Date" esv:merge="override">
+        <sv:value>2018-04-11T14:02:00.000+02:00</sv:value>
+      </sv:property>
+      <sv:property sv:name="translationspoc:categories" sv:type="String" esv:merge="override" sv:multiple="true"/>
+      <sv:property sv:name="hippostdpubwf:lastModifiedBy" sv:type="String" esv:merge="override">
+        <sv:value>admin</sv:value>
+      </sv:property>
+      <sv:property sv:name="hippostdpubwf:creationDate" sv:type="Date" esv:merge="override">
+        <sv:value>2018-04-11T14:01:40.374+02:00</sv:value>
+      </sv:property>
+      <sv:property sv:name="translationspoc:authornames" sv:type="String" esv:merge="override" sv:multiple="true">
+        <sv:value>Hippo Essentials Author</sv:value>
+      </sv:property>
+      <sv:property sv:name="hippotranslation:locale" sv:type="String" esv:merge="override">
+        <sv:value>nl</sv:value>
+      </sv:property>
+      <sv:node sv:name="translationspoc:authors">
+        <sv:property sv:name="jcr:primaryType" sv:type="Name">
+          <sv:value>hippo:mirror</sv:value>
+        </sv:property>
+        <sv:property sv:name="hippo:docbase" sv:type="String">
+          <sv:value>696a2657-448f-4a5a-89f5-1426d9ba1f7d</sv:value>
+        </sv:property>
+      </sv:node>
+      <sv:node sv:name="translationspoc:content">
+        <sv:property sv:name="jcr:primaryType" sv:type="Name">
+          <sv:value>hippostd:html</sv:value>
+        </sv:property>
+        <sv:property sv:name="hippostd:content" sv:type="String">
+          <sv:value/>
+        </sv:property>
+      </sv:node>
+      <sv:node sv:name="translationspoc:translationlink">
+        <sv:property sv:name="jcr:primaryType" sv:type="Name">
+          <sv:value>hippo:mirror</sv:value>
+        </sv:property>
+        <sv:property sv:name="hippo:docbase" sv:type="String">
+          <sv:value>6bc75173-5ab9-41aa-9454-3b440bcc3d2d</sv:value>
+        </sv:property>
+      </sv:node>
+    </sv:node>
+    <sv:node sv:name="first-blogpost" esv:merge="combine">
+      <sv:property sv:name="translationspoc:authornames" sv:type="String" esv:merge="override" sv:multiple="true">
+        <sv:value>Hippo Essentials Author</sv:value>
+      </sv:property>
+    </sv:node>
+  </sv:node>
+</sv:node>
