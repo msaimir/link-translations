@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
@@ -116,74 +117,80 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
 
         add(new EmptyPanel("content"));
 
-        add(new MenuDescription() {
-            private static final long serialVersionUID = 1L;
+        if (!getLanguagesToTranslate().isEmpty()) {
 
-            @Override
-            public Component getLabel() {
-                Fragment fragment = new Fragment("label", "label", LinkTranslationsWorkflowPlugin.this);
-                fragment.add( HippoIcon.fromSprite("menu-image", Icon.TRANSLATE));
-                StringResourceModel title = new StringResourceModel("plugin.menuitem.title", this,null);
-                fragment.add(new Label("menu-title", title));
-                return fragment;
-            }
+            add(new MenuDescription() {
+                private static final long serialVersionUID = 1L;
 
-            @Override
-            public MarkupContainer getContent() {
+                @Override
+                public Component getLabel() {
+                    Fragment fragment = new Fragment("label", "label", LinkTranslationsWorkflowPlugin.this);
+                    fragment.add(HippoIcon.fromSprite("menu-image", Icon.TRANSLATE));
+                    StringResourceModel title = new StringResourceModel("plugin.menuitem.title", this, null);
+                    fragment.add(new Label("menu-title", title));
+                    this.setVisible(false);
+                    return fragment;
+                }
 
-                DataView<HippoLocale> dataView = new DataView<HippoLocale>("languages", new AvailableLocaleProvider(localeProvider)) {
-                    private static final long serialVersionUID = 1L;
+                @Override
+                public MarkupContainer getContent() {
 
-                    {
-                        onPopulate();
-                    }
+                    DataView<HippoLocale> dataView = new DataView<HippoLocale>("languages", new LocalesToTranslateProvider(localeProvider)) {
+                        private static final long serialVersionUID = 1L;
 
-                    @Override
-                    protected void populateItem(Item<HippoLocale> item) {
-                        final HippoLocale locale = item.getModelObject();
-                        final String language = locale.getName();
-
-                        if (!hasLocale(language)) {
-                            item.add(new TranslationAction("language", new LoadableDetachableModel<String>() {
-
-                                @Override
-                                protected String load() {
-                                    return locale.getDisplayName(getLocale()) ;
-                                }
-
-                            }, item.getModel(), language, languageModel
-                            ));
+                        {
+                            onPopulate();
                         }
-                    }
 
-                    @Override
-                    protected void onDetach() {
-                        languageModel.detach();
-                        super.onDetach();
-                    }
-                };
-                Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
-                fragment.add(dataView);
-                LinkTranslationsWorkflowPlugin.this.addOrReplace(fragment);
-                return fragment;
-            }
-        });
+                        @Override
+                        protected void populateItem(Item<HippoLocale> item) {
+                            final HippoLocale locale = item.getModelObject();
+                            final String language = locale.getName();
 
+                            if (!hasLocale(language)) {
+                                item.add(new TranslationAction("language", new LoadableDetachableModel<String>() {
+
+                                    @Override
+                                    protected String load() {
+                                        return locale.getDisplayName(getLocale()) + "...";
+                                    }
+
+                                }, item.getModel(), language, languageModel
+                                ));
+                            }
+                        }
+
+                        @Override
+                        protected void onDetach() {
+                            languageModel.detach();
+                            super.onDetach();
+                        }
+                    };
+                    Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
+
+                    fragment.add(dataView);
+                    LinkTranslationsWorkflowPlugin.this.addOrReplace(fragment);
+
+                    return fragment;
+                }
+            });
+        }
     }
 
     public boolean hasLocale(String locale) {
-        return translationProvider != null && translationProvider.contains(locale);
+        return translationProvider.contains(locale);
     }
 
     @SuppressWarnings("unchecked")
-    private Set<String> getAvailableLanguages() {
+    private Set<String> getLanguagesToTranslate() {
         WorkflowDescriptorModel wdm = (WorkflowDescriptorModel) LinkTranslationsWorkflowPlugin.this.getDefaultModel();
         if (wdm != null) {
             WorkflowDescriptor descriptor = wdm.getObject();
             WorkflowManager manager = UserSession.get().getWorkflowManager();
             try {
                 TranslationWorkflow translationWorkflow = (TranslationWorkflow) manager.getWorkflow(descriptor);
-                return (Set<String>) translationWorkflow.hints().get("available");
+                Set<String> available = (Set<String>) translationWorkflow.hints().get("available");
+                return available.stream().filter(language -> !hasLocale(language)).collect(Collectors.toSet());
             } catch (RepositoryException | RemoteException | WorkflowException ex) {
                 log.error("Failed to retrieve available languages", ex);
             }
@@ -192,18 +199,16 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
     }
 
     private Node getDocumentNode() throws RepositoryException {
-        WorkflowDescriptorModel wdm = (WorkflowDescriptorModel) getDefaultModel();
-        if (wdm != null) {
-            return wdm.getNode();
+        if (getDefaultModel() instanceof WorkflowDescriptorModel) {
+            return ((WorkflowDescriptorModel) getDefaultModel()).getNode();
         }
         return null;
     }
 
     @Override
     public WorkflowDescriptor getModelObject() {
-        WorkflowDescriptorModel wdm = (WorkflowDescriptorModel) getDefaultModel();
-        if (wdm != null) {
-            return wdm.getObject();
+        if (getDefaultModel() instanceof WorkflowDescriptorModel) {
+            return ( (WorkflowDescriptorModel) getDefaultModel()).getObject();
         }
         return null;
     }
@@ -228,31 +233,31 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
 
         @Override
         protected String load() {
-            WorkflowDescriptorModel wdm = (WorkflowDescriptorModel) LinkTranslationsWorkflowPlugin.this.getDefaultModel();
-            if (wdm != null) {
+            if (LinkTranslationsWorkflowPlugin.this.getDefaultModel() instanceof WorkflowDescriptorModel) {
+                WorkflowDescriptorModel wdm = (WorkflowDescriptorModel) LinkTranslationsWorkflowPlugin.this.getDefaultModel();
                 try {
                     Node documentNode = wdm.getNode();
                     return documentNode.getProperty(HippoTranslationNodeType.LOCALE).getString();
                 } catch (RepositoryException ex) {
-                    log.error(ex.getMessage(), ex);
+                    log.error("failed to load document locale from workflow model", ex);
                 }
             }
             return "unknown";
         }
     }
 
-    private final class AvailableLocaleProvider implements IDataProvider<HippoLocale> {
+    private final class LocalesToTranslateProvider implements IDataProvider<HippoLocale> {
         private final ILocaleProvider localeProvider;
         private static final long serialVersionUID = 1L;
         private transient List<HippoLocale> availableLocales;
 
-        private AvailableLocaleProvider(ILocaleProvider localeProvider) {
+        private LocalesToTranslateProvider(ILocaleProvider localeProvider) {
             this.localeProvider = localeProvider;
         }
 
         private void load() {
             availableLocales = new LinkedList<>();
-            for (String language : getAvailableLanguages()) {
+            for (String language : getLanguagesToTranslate()) {
                 availableLocales.add(localeProvider.getLocale(language));
             }
             Collections.sort(availableLocales, Comparator.comparing(o -> o.getDisplayName(getLocale())));
@@ -441,7 +446,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                 HippoTranslatedNode translatedDocNode = new HippoTranslatedNode(documentVariantNode);
                 HippoTranslatedNode hippoTranslatedNode = getClosestFolderWithLinkedTranslations(translatedDocNode);
                 if (hippoTranslatedNode != null) {
-                    mergedPluginConfig.put(NodePickerControllerSettings.BASE_UUID, hippoTranslatedNode.getTranslation(language).getIdentifier());
+                    mergedPluginConfig.put(NodePickerControllerSettings.BASE_PATH, hippoTranslatedNode.getTranslation(language).getPath());
                 }
             }
             return mergedPluginConfig;
@@ -462,6 +467,5 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                 }
             }
         }
-
     }
 }
