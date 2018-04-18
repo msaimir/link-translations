@@ -39,7 +39,6 @@ import org.hippoecm.frontend.plugin.config.IPluginConfig;
 import org.hippoecm.frontend.plugin.config.impl.JavaPluginConfig;
 import org.hippoecm.frontend.plugins.standards.icon.HippoIcon;
 import org.hippoecm.frontend.plugins.standards.icon.HippoIconStack;
-import org.hippoecm.frontend.plugins.standards.image.CachingImage;
 import org.hippoecm.frontend.plugins.standards.picker.NodePickerControllerSettings;
 import org.hippoecm.frontend.service.IconSize;
 import org.hippoecm.frontend.service.render.RenderPlugin;
@@ -57,6 +56,7 @@ import org.hippoecm.repository.api.WorkflowManager;
 import org.hippoecm.repository.translation.HippoTranslatedNode;
 import org.hippoecm.repository.translation.HippoTranslationNodeType;
 import org.hippoecm.repository.translation.TranslationWorkflow;
+import org.hippoecm.repository.util.JcrUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,8 +130,8 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
 
             @Override
             public MarkupContainer getContent() {
-                Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
-                fragment.add(new DataView<HippoLocale>("languages", new AvailableLocaleProvider(localeProvider)) {
+
+                DataView<HippoLocale> dataView = new DataView<HippoLocale>("languages", new AvailableLocaleProvider(localeProvider)) {
                     private static final long serialVersionUID = 1L;
 
                     {
@@ -150,6 +150,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                                 protected String load() {
                                     return locale.getDisplayName(getLocale()) ;
                                 }
+
                             }, item.getModel(), language, languageModel
                             ));
                         }
@@ -160,7 +161,9 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                         languageModel.detach();
                         super.onDetach();
                     }
-                });
+                };
+                Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
+                fragment.add(dataView);
                 LinkTranslationsWorkflowPlugin.this.addOrReplace(fragment);
                 return fragment;
             }
@@ -252,12 +255,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
             for (String language : getAvailableLanguages()) {
                 availableLocales.add(localeProvider.getLocale(language));
             }
-            Collections.sort(availableLocales, new Comparator<HippoLocale>() {
-                @Override
-                public int compare(HippoLocale o1, HippoLocale o2) {
-                    return o1.getDisplayName(getLocale()).compareTo(o2.getDisplayName(getLocale()));
-                }
-            });
+            Collections.sort(availableLocales, Comparator.comparing(o -> o.getDisplayName(getLocale())));
         }
 
         @Override
@@ -423,6 +421,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                     while (docNodes.hasNext()) {
                         Node docNode = docNodes.nextNode();
                         log.debug("Setting translationID of " + docNode.getPath() + " to " + translationId);
+                        JcrUtils.ensureIsCheckedOut(docNode);
                         docNode.setProperty(HippoTranslationNodeType.ID, translationId);
                         docNode.getSession().save();
                         docNode.getSession().refresh(false);
