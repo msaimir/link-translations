@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.jcr.Node;
@@ -85,8 +86,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
         DocumentTranslationProvider docTranslationProvider = null;
         try {
             documentNode = getDocumentNode();
-            docTranslationProvider = new DocumentTranslationProvider(new JcrNodeModel(documentNode),
-                    localeProvider);
+            docTranslationProvider = new DocumentTranslationProvider(new JcrNodeModel(documentNode), localeProvider);
         } catch (RepositoryException e) {
             log.warn("Unable to find document node", e);
         }
@@ -122,64 +122,96 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
 
         add(new EmptyPanel("content"));
 
-        if (!getLanguagesToTranslate().isEmpty()) {
 
-            add(new MenuDescription() {
-                private static final long serialVersionUID = 1L;
+        add(new MenuDescription() {
+            private static final long serialVersionUID = 1L;
 
-                @Override
-                public Component getLabel() {
-                    Fragment fragment = new Fragment("label", "label", LinkTranslationsWorkflowPlugin.this);
-                    fragment.add(HippoIcon.fromSprite("menu-image", Icon.TRANSLATE));
-                    StringResourceModel title = new StringResourceModel("plugin.menuitem.title", this, null);
-                    fragment.add(new Label("menu-title", title));
-                    this.setVisible(false);
-                    return fragment;
-                }
+            @Override
+            public Component getLabel() {
+                Fragment fragment = new Fragment("label", "label", LinkTranslationsWorkflowPlugin.this);
+                fragment.add(HippoIcon.fromSprite("menu-image", Icon.TRANSLATE));
+                StringResourceModel title = new StringResourceModel("plugin.menuitem.title", this, null);
+                fragment.add(new Label("menu-title", title));
+                this.setVisible(false);
+                return fragment;
+            }
 
-                @Override
-                public MarkupContainer getContent() {
+            @Override
+            public MarkupContainer getContent() {
+                final LocalesToTranslateProvider localesToTranslateProvider = new LocalesToTranslateProvider(localeProvider);
 
-                    DataView<HippoLocale> dataView = new DataView<HippoLocale>("languages", new LocalesToTranslateProvider(localeProvider)) {
-                        private static final long serialVersionUID = 1L;
+                DataView<HippoLocale> dataView = new DataView<HippoLocale>("languages", localesToTranslateProvider) {
+                    private static final long serialVersionUID = 1L;
 
-                        {
-                            onPopulate();
-                        }
+                    {
+                        onPopulate();
 
-                        @Override
-                        protected void populateItem(Item<HippoLocale> item) {
-                            final HippoLocale locale = item.getModelObject();
-                            final String language = locale.getName();
-
-                            if (!hasLocale(language)) {
-                                item.add(new TranslationAction("language", new LoadableDetachableModel<String>() {
-
+                        add(
+                            new StdWorkflow<TranslationWorkflow>("unlink",
+                                new LoadableDetachableModel<String>() {
                                     @Override
                                     protected String load() {
-                                        return locale.getDisplayName(getLocale()) + "...";
+                                        return new StringResourceModel("plugin.menuitem.unlink.title", LinkTranslationsWorkflowPlugin.this, null).getString();
                                     }
+                                }
+                            ) {
+                                @Override
+                                protected void execute() throws Exception {
+                                    log.debug("remove translation id from {}", getDocumentNode().getPath());
+                                    String uuid = UUID.randomUUID().toString();
+                                    setTranslationId(getDocumentNode().getParent(), uuid);
+                                    redraw();
+                                }
 
-                                }, item.getModel(), language
-                                ));
-                            }
+                                @Override
+                                public boolean isVisible() {
+                                    if (super.isVisible() && findPage() != null) {
+                                        return canTranslateModel.getObject();
+                                    }
+                                    return false;
+                                }
+
+                                @Override
+                                protected Component getIcon(final String id) {
+                                    return HippoIcon.fromSprite(id, Icon.UNLINK);
+                                }
+                            });
+                    }
+
+                    @Override
+                    protected void populateItem(Item<HippoLocale> item) {
+                        final HippoLocale locale = item.getModelObject();
+                        final String language = locale.getName();
+
+                        if (!hasLocale(language)) {
+                            item.add(new TranslationAction("language", new LoadableDetachableModel<String>() {
+
+                                @Override
+                                protected String load() {
+                                    return locale.getDisplayName(getLocale()) + "...";
+                                }
+
+                            }, item.getModel(), language
+                            ));
                         }
+                    }
 
-                        @Override
-                        protected void onDetach() {
-                            languageModel.detach();
-                            super.onDetach();
-                        }
-                    };
-                    Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
+                    @Override
+                    protected void onDetach() {
+                        languageModel.detach();
+                        super.onDetach();
+                    }
+                };
 
-                    fragment.add(dataView);
-                    LinkTranslationsWorkflowPlugin.this.addOrReplace(fragment);
+                Fragment fragment = new Fragment("content", "languages", LinkTranslationsWorkflowPlugin.this);
 
-                    return fragment;
-                }
-            });
-        }
+                fragment.add(dataView);
+                LinkTranslationsWorkflowPlugin.this.addOrReplace(fragment);
+
+                return fragment;
+            }
+        });
+
     }
 
     public boolean hasLocale(String locale) {
@@ -286,7 +318,6 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                 protected HippoLocale load() {
                     return localeProvider.getLocale(id);
                 }
-
             };
         }
 
@@ -428,24 +459,7 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
                     }
                 }
 
-                private void setTranslationId(Node handleNode, String translationId) {
-                    if (handleNode != null) {
-                        try {
-                            NodeIterator docNodes = handleNode.getNodes(handleNode.getName());
-                            while (docNodes.hasNext()) {
-                                Node docNode = docNodes.nextNode();
-                                log.debug("Setting translationID of " + docNode.getPath() + " to " + translationId);
-                                JcrUtils.ensureIsCheckedOut(docNode);
-                                docNode.setProperty(HippoTranslationNodeType.ID, translationId);
-                                docNode.getSession().save();
-                                docNode.getSession().refresh(false);
-                            }
-                        } catch (RepositoryException e) {
-                            log.error("could not set property hippotranslation:id for document "
-                                    + new JcrNodeModel(handleNode).getItemModel().getPath(), e);
-                        }
-                    }
-                }
+
 
                 private boolean canUpdateTranslation(final Node selectedDocumentHandle) throws RepositoryException {
                     Node selectedDocumentVariant = selectedDocumentHandle.getNode(selectedDocumentHandle.getName());
@@ -487,5 +501,25 @@ public final class LinkTranslationsWorkflowPlugin extends RenderPlugin {
         }
 
     }
+
+    private void setTranslationId(Node handleNode, String translationId) {
+        if (handleNode != null) {
+            try {
+                NodeIterator docNodes = handleNode.getNodes(handleNode.getName());
+                while (docNodes.hasNext()) {
+                    Node docNode = docNodes.nextNode();
+                    log.debug("Setting translationID of " + docNode.getPath() + " to " + translationId);
+                    JcrUtils.ensureIsCheckedOut(docNode);
+                    docNode.setProperty(HippoTranslationNodeType.ID, translationId);
+                    docNode.getSession().save();
+                    docNode.getSession().refresh(false);
+                }
+            } catch (RepositoryException e) {
+                log.error("could not set property hippotranslation:id for document "
+                        + new JcrNodeModel(handleNode).getItemModel().getPath(), e);
+            }
+        }
+    }
+
 
 }
